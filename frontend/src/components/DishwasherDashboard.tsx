@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import { emptyMachineApi, getLeaderboardApi, startMachineApi, type LeaderboardEntry } from '../api';
 
 type MachineStatus = 'idle' | 'running' | 'finished';
 
@@ -13,6 +14,7 @@ interface MachineState {
 }
 
 const STORAGE_KEY = 'dishwashers:v1';
+const USERNAME_KEY = 'dishwashers:username';
 
 function initialMachines(): MachineState[] {
   return [1, 2, 3, 4].map((n) => ({
@@ -51,7 +53,13 @@ function formatRemaining(minutes: number): string {
 
 export function DishwasherDashboard(): React.ReactElement {
   const [machines, setMachines] = useState<MachineState[]>(() => loadFromStorage());
+  const [userName, setUserName] = useState<string | null>(() => {
+    const v = localStorage.getItem(USERNAME_KEY);
+    return v && v.trim().length > 0 ? v : null;
+  });
+  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const now = Date.now();
+  const needsUserName = !userName;
 
   // Tick every 15s to update remaining times
   useEffect(() => {
@@ -96,7 +104,27 @@ export function DishwasherDashboard(): React.ReactElement {
     });
   }, []);
 
-  function startMachine(id: string, cycleMinutes: number): void {
+  // Load leaderboard periodically
+  useEffect(() => {
+    let cancelled = false;
+    const load = async () => {
+      try {
+        const res = await getLeaderboardApi();
+        if (!cancelled) setLeaderboard(res.leaderboard);
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error(e);
+      }
+    };
+    load();
+    const t = setInterval(load, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, []);
+
+  async function startMachine(id: string, cycleMinutes: number): Promise<void> {
     const end = Date.now() + cycleMinutes * 60000;
     setMachines((prev) => {
       const updated = prev.map((m): MachineState =>
@@ -112,6 +140,15 @@ export function DishwasherDashboard(): React.ReactElement {
       saveToStorage(updated);
       return updated;
     });
+    try {
+      if (!userName) return;
+      await startMachineApi({ machineId: id, cycleMinutes, userName });
+      const res = await getLeaderboardApi();
+      setLeaderboard(res.leaderboard);
+    } catch (e) {
+      // eslint-disable-next-line no-console
+      console.error(e);
+    }
   }
 
   function markFinished(id: string): void {
@@ -134,7 +171,12 @@ export function DishwasherDashboard(): React.ReactElement {
     });
   }
 
-  const allIdle = useMemo(() => machines.every((m) => m.status === 'idle'), [machines]);
+  function saveUserName(name: string): void {
+    const trimmed = name.trim();
+    if (trimmed.length === 0) return;
+    localStorage.setItem(USERNAME_KEY, trimmed);
+    setUserName(trimmed);
+  }
 
   return (
     <div className="app-shell" role="application" aria-label="42 waschingmachine">
@@ -143,14 +185,6 @@ export function DishwasherDashboard(): React.ReactElement {
           <h1 className="title">42 waschingmachine</h1>
           <p className="subtitle">4 dishwashers for the establishment</p>
         </div>
-        <button
-          className="muted"
-          aria-label="Reset all to idle"
-          onClick={() => machines.forEach((m) => resetToIdle(m.id))}
-          disabled={allIdle}
-        >
-          Reset all
-        </button>
       </header>
 
       <main className="grid">
@@ -168,33 +202,80 @@ export function DishwasherDashboard(): React.ReactElement {
             </div>
 
             <div className="controls">
-              {m.status !== 'running' && (
-                <button
-                  className="primary"
-                  onClick={() => startMachine(m.id, 45)}
-                  aria-label={`Start ${m.name} 45 minutes`}
-                >
-                  Start 45m
-                </button>
+              {m.status === 'idle' && (
+                <>
+                  <button className="primary" onClick={() => startMachine(m.id, 15)} aria-label={`Start ${m.name} 15 minutes`}>
+                    Start 15m
+                  </button>
+                  <button className="primary" onClick={() => startMachine(m.id, 30)} aria-label={`Start ${m.name} 30 minutes`}>
+                    Start 30m
+                  </button>
+                  <button className="primary" onClick={() => startMachine(m.id, 45)} aria-label={`Start ${m.name} 45 minutes`}>
+                    Start 45m
+                  </button>
+                </>
               )}
               {m.status === 'running' && (
-                <button
-                  className="warn"
-                  onClick={() => markFinished(m.id)}
-                  aria-label={`Mark ${m.name} finished`}
-                >
+                <button className="warn" onClick={() => markFinished(m.id)} aria-label={`Mark ${m.name} finished`}>
                   Mark finished
                 </button>
               )}
-              <button className="muted" onClick={() => resetToIdle(m.id)} aria-label={`Reset ${m.name} to idle`}>
-                Reset
-              </button>
+              {m.status === 'finished' && (
+                <button className="primary" onClick={async () => {
+                  try {
+                    if (userName) {
+                      await emptyMachineApi({ machineId: m.id, userName });
+                      const res = await getLeaderboardApi();
+                      setLeaderboard(res.leaderboard);
+                    }
+                  } catch (e) {
+                    // eslint-disable-next-line no-console
+                    console.error(e);
+                  } finally {
+                    resetToIdle(m.id);
+                  }
+                }} aria-label={`Empty ${m.name}`}>
+                  Empty it
+                </button>
+              )}
             </div>
           </article>
         ))}
       </main>
 
-      <p className="footer-note">Local-only, no server required.</p>
+      <section className="leaderboard" aria-label="Leaderboard">
+        <h3 className="leaderboard-title">Leaderboard</h3>
+        <ul className="leaderboard-list">
+          {leaderboard.map((e) => (
+            <li key={e.user} className="leaderboard-item">
+              <span className="lb-user">{e.user}</span>
+              <span className="lb-points">{e.points} pts</span>
+              <span className="lb-starts" aria-label="starts">{e.starts} starts</span>
+            </li>
+          ))}
+          {leaderboard.length === 0 && <li className="leaderboard-empty">No entries yet.</li>}
+        </ul>
+      </section>
+
+      {needsUserName && (
+        <div className="overlay" role="dialog" aria-modal="true" aria-label="Enter your name">
+          <div className="overlay-card">
+            <h2 className="overlay-title">Welcome</h2>
+            <p className="overlay-subtitle">Please enter your name to participate</p>
+            <form
+              onSubmit={(e) => {
+                e.preventDefault();
+                const data = new FormData(e.currentTarget as HTMLFormElement);
+                const name = String(data.get('name') || '');
+                saveUserName(name);
+              }}
+            >
+              <input name="name" className="input" placeholder="Your name" autoFocus aria-label="Your name" />
+              <button className="primary submit" type="submit">Save</button>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

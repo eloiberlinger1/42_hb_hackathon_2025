@@ -1,12 +1,29 @@
 version: "3.9"
 services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - DJANGO_ALLOWED_HOSTS=*
+      - DJANGO_DEBUG=false
+    volumes:
+      - backend-data:/app
+    expose:
+      - "8000"
+    restart: unless-stopped
+
   web:
     build:
       context: ./frontend
       dockerfile: Dockerfile
+    depends_on:
+      - backend
     ports:
-      - "8080:80"  # host:container
+      - "8080:80"
     restart: unless-stopped
-    # No env required; purely static build
+
+volumes:
+  backend-data:
 
 
