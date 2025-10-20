@@ -35,4 +35,15 @@ export function getLeaderboardApi(): Promise<{ leaderboard: LeaderboardEntry[] }
   return request('/api/leaderboard');
 }
 
+export interface MachineStateDto {
+  id: string;
+  name: string;
+  status: 'idle' | 'running' | 'finished';
+  remaining_minutes: number | null;
+}
+
+export function getStateApi(): Promise<{ machines: MachineStateDto[] }>{
+  return request('/api/state');
+}
+
 

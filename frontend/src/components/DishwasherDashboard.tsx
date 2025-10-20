@@ -1,5 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { emptyMachineApi, getLeaderboardApi, startMachineApi, type LeaderboardEntry } from '../api';
+import { emptyMachineApi, getLeaderboardApi, getStateApi, type MachineStateDto, startMachineApi, type LeaderboardEntry } from '../api';
 
 type MachineStatus = 'idle' | 'running' | 'finished';
 
@@ -118,6 +118,47 @@ export function DishwasherDashboard(): React.ReactElement {
     };
     load();
     const t = setInterval(load, 60000);
+    return () => {
+      cancelled = true;
+      clearInterval(t);
+    };
+  }, []);
+
+  // Live polling: sync machine state from backend every 5s
+  useEffect(() => {
+    let cancelled = false;
+    async function sync() {
+      try {
+        const res = await getStateApi();
+        if (cancelled) return;
+        setMachines((prev) => {
+          const next: MachineState[] = res.machines.map((s: MachineStateDto) => {
+            let endsAt: number | null = null;
+            let remaining: number | null = null;
+            if (s.status === 'running' && s.remaining_minutes != null) {
+              remaining = s.remaining_minutes;
+              endsAt = Date.now() + remaining * 60000;
+            } else if (s.status === 'finished') {
+              remaining = 0;
+            }
+            return {
+              id: s.id,
+              name: s.name,
+              status: s.status,
+              remainingMinutes: remaining,
+              endsAt,
+            };
+          });
+          saveToStorage(next);
+          return next;
+        });
+      } catch (e) {
+        // eslint-disable-next-line no-console
+        console.error(e);
+      }
+    }
+    sync();
+    const t = setInterval(sync, 5000);
     return () => {
       cancelled = true;
       clearInterval(t);
