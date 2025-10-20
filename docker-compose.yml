@@ -1,0 +1,12 @@
+version: "3.9"
+services:
+  web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    ports:
+      - "8080:80"  # host:container
+    restart: unless-stopped
+    # No env required; purely static build
+
+

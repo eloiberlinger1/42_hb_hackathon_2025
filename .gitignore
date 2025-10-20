@@ -1,11 +1,14 @@
-node_modules
-dist
+# OS
 .DS_Store
 
-# Vite/TypeScript caches
-.vite
-.vite-cache
-coverage
+# Node/Vite
+node_modules/
+dist/
+build/
+.vite/
+.vite-cache/
+.cache/
+coverage/
 *.tsbuildinfo
 
 # Logs
@@ -22,9 +25,12 @@ bun-debug.log*
 .env.*.local
 
 # Editors/IDE
-.vscode
-.idea
+.vscode/
+.idea/
 *.swp
 *.swo
+
+# Docker
+docker-compose.override.yml
 
 

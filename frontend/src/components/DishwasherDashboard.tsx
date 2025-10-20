@@ -57,13 +57,13 @@ export function DishwasherDashboard(): React.ReactElement {
   useEffect(() => {
     const timer = setInterval(() => {
       setMachines((prev) => {
-        const updated = prev.map((m) => {
+        const updated = prev.map((m): MachineState => {
           if (m.status !== 'running' || m.endsAt === null) return m;
           const remainingMs = m.endsAt - Date.now();
           if (remainingMs <= 0) {
             return {
               ...m,
-              status: 'finished',
+              status: 'finished' as const,
               remainingMinutes: 0,
               endsAt: null,
             };
@@ -83,11 +83,11 @@ export function DishwasherDashboard(): React.ReactElement {
   // Restore running states on mount to recalc remaining
   useEffect(() => {
     setMachines((prev) => {
-      const updated = prev.map((m) => {
+      const updated = prev.map((m): MachineState => {
         if (m.status !== 'running' || m.endsAt === null) return m;
         const remainingMs = m.endsAt - now;
         if (remainingMs <= 0) {
-          return { ...m, status: 'finished', remainingMinutes: 0, endsAt: null };
+          return { ...m, status: 'finished' as const, remainingMinutes: 0, endsAt: null };
         }
         return { ...m, remainingMinutes: Math.ceil(remainingMs / 60000) };
       });
@@ -99,11 +99,11 @@ export function DishwasherDashboard(): React.ReactElement {
   function startMachine(id: string, cycleMinutes: number): void {
     const end = Date.now() + cycleMinutes * 60000;
     setMachines((prev) => {
-      const updated = prev.map((m) =>
+      const updated = prev.map((m): MachineState =>
         m.id === id
           ? {
               ...m,
-              status: 'running',
+              status: 'running' as const,
               remainingMinutes: cycleMinutes,
               endsAt: end,
             }
@@ -116,8 +116,8 @@ export function DishwasherDashboard(): React.ReactElement {
 
   function markFinished(id: string): void {
     setMachines((prev) => {
-      const updated = prev.map((m) =>
-        m.id === id ? { ...m, status: 'finished', remainingMinutes: 0, endsAt: null } : m
+      const updated = prev.map((m): MachineState =>
+        m.id === id ? { ...m, status: 'finished' as const, remainingMinutes: 0, endsAt: null } : m
       );
       saveToStorage(updated);
       return updated;
@@ -126,8 +126,8 @@ export function DishwasherDashboard(): React.ReactElement {
 
   function resetToIdle(id: string): void {
     setMachines((prev) => {
-      const updated = prev.map((m) =>
-        m.id === id ? { ...m, status: 'idle', remainingMinutes: null, endsAt: null } : m
+      const updated = prev.map((m): MachineState =>
+        m.id === id ? { ...m, status: 'idle' as const, remainingMinutes: null, endsAt: null } : m
       );
       saveToStorage(updated);
       return updated;
