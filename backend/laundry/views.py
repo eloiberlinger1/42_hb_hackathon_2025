@@ -72,13 +72,12 @@ def start_machine(request: HttpRequest):
 
     user = get_or_create_user(user_name)
     ActionLog.objects.create(user=user, machine=machine, action='start')
-    # +1 point for starting a machine
     UserProfile.objects.filter(pk=user.pk).update(points=F('points') + 1)
 
-    # Update machine state
     machine.status = 'running'
     machine.ends_at = timezone.now() + timedelta(minutes=cycle_minutes)
-    machine.save(update_fields=['status', 'ends_at'])
+    machine.started_by = user
+    machine.save(update_fields=['status', 'ends_at', 'started_by'])
 
     return JsonResponse({'ok': True})
 
@@ -104,13 +103,12 @@ def empty_machine(request: HttpRequest):
 
     user = get_or_create_user(user_name)
     ActionLog.objects.create(user=user, machine=machine, action='empty')
-    # +5 points for emptying a machine
     UserProfile.objects.filter(pk=user.pk).update(points=F('points') + 5)
 
-    # Reset machine state
     machine.status = 'idle'
     machine.ends_at = None
-    machine.save(update_fields=['status', 'ends_at'])
+    machine.started_by = None
+    machine.save(update_fields=['status', 'ends_at', 'started_by'])
 
     return JsonResponse({'ok': True})
 
@@ -133,7 +131,7 @@ def leaderboard(request: HttpRequest):
 
 
 def state(request: HttpRequest):
-    machines = Machine.objects.order_by('id').values('id', 'name', 'status', 'ends_at', 'floor')
+    machines = Machine.objects.order_by('id').values('id', 'name', 'status', 'ends_at', 'floor', 'started_by__name')
     out = []
     now = timezone.now()
     for m in machines:
@@ -151,5 +149,6 @@ def state(request: HttpRequest):
             'status': status,
             'remaining_minutes': remaining_minutes,
             'floor': m['floor'],
+            'started_by': m['started_by__name'],
         })
     return JsonResponse({'machines': out})

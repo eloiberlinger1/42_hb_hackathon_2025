@@ -18,6 +18,8 @@ interface MachineState {
   remainingMinutes: number | null;
   // Epoch ms when the cycle ends; null if not running
   endsAt: number | null;
+  // Name of the user who started the current cycle; null if none
+  startedBy: string | null;
 }
 
 const STORAGE_KEY = 'dishwashers:v1';
@@ -30,6 +32,7 @@ function initialMachines(): MachineState[] {
     status: 'idle',
     remainingMinutes: null,
     endsAt: null,
+    startedBy: null,
   }));
 }
 
@@ -154,6 +157,7 @@ export function DishwasherDashboard(): React.ReactElement {
               status: s.status,
               remainingMinutes: remaining,
               endsAt,
+              startedBy: s.started_by ?? null,
             };
           });
           saveToStorage(next);
@@ -177,6 +181,7 @@ export function DishwasherDashboard(): React.ReactElement {
               status: 'running' as const,
               remainingMinutes: cycleMinutes,
               endsAt: end,
+              startedBy: userName ?? null,
             }
           : m
       );
@@ -207,7 +212,9 @@ export function DishwasherDashboard(): React.ReactElement {
   function resetToIdle(id: string): void {
     setMachines((prev) => {
       const updated = prev.map((m): MachineState =>
-        m.id === id ? { ...m, status: 'idle' as const, remainingMinutes: null, endsAt: null } : m
+        m.id === id
+          ? { ...m, status: 'idle' as const, remainingMinutes: null, endsAt: null, startedBy: null }
+          : m
       );
       saveToStorage(updated);
       return updated;
@@ -239,25 +246,23 @@ export function DishwasherDashboard(): React.ReactElement {
               <span className={`dot ${m.status}`} aria-hidden />
               <span>
                 {m.status === 'idle' && 'Idle'}
-                {m.status === 'running' &&
-                  `Running • ${formatRemaining(m.remainingMinutes ?? 0)} left`}
+                {m.status === 'running' && (
+                  <>
+                    Running • {formatRemaining(m.remainingMinutes ?? 0)} left
+                    {m.startedBy && <span style={{ marginLeft: 6, color: 'var(--muted)' }}>by {m.startedBy}</span>}
+                  </>
+                )}
                 {m.status === 'finished' && 'Finished'}
               </span>
             </div>
 
             <div className="controls">
               {m.status === 'idle' && (
-                <>
-                  <button className="primary" onClick={() => startMachine(m.id, 15)} aria-label={`Start ${m.name} 15 minutes`}>
-                    Start 15m
-                  </button>
-                  <button className="primary" onClick={() => startMachine(m.id, 30)} aria-label={`Start ${m.name} 30 minutes`}>
-                    Start 30m
-                  </button>
-                  <button className="primary" onClick={() => startMachine(m.id, 45)} aria-label={`Start ${m.name} 45 minutes`}>
-                    Start 45m
-                  </button>
-                </>
+                <div className="cycles">
+                  <button className="primary" onClick={() => startMachine(m.id, 15)} aria-label={`Start ${m.name} 15 minutes`}>Start 15m</button>
+                  <button className="primary" onClick={() => startMachine(m.id, 30)} aria-label={`Start ${m.name} 30 minutes`}>Start 30m</button>
+                  <button className="primary" onClick={() => startMachine(m.id, 45)} aria-label={`Start ${m.name} 45 minutes`}>Start 45m</button>
+                </div>
               )}
               {m.status === 'running' && (
                 <button className="warn" onClick={() => markFinished(m.id)} aria-label={`Mark ${m.name} finished`}>
@@ -295,25 +300,23 @@ export function DishwasherDashboard(): React.ReactElement {
               <span className={`dot ${m.status}`} aria-hidden />
               <span>
                 {m.status === 'idle' && 'Idle'}
-                {m.status === 'running' &&
-                  `Running • ${formatRemaining(m.remainingMinutes ?? 0)} left`}
+                {m.status === 'running' && (
+                  <>
+                    Running • {formatRemaining(m.remainingMinutes ?? 0)} left
+                    {m.startedBy && <span style={{ marginLeft: 6, color: 'var(--muted)' }}>by {m.startedBy}</span>}
+                  </>
+                )}
                 {m.status === 'finished' && 'Finished'}
               </span>
             </div>
 
             <div className="controls">
               {m.status === 'idle' && (
-                <>
-                  <button className="primary" onClick={() => startMachine(m.id, 15)} aria-label={`Start ${m.name} 15 minutes`}>
-                    Start 15m
-                  </button>
-                  <button className="primary" onClick={() => startMachine(m.id, 30)} aria-label={`Start ${m.name} 30 minutes`}>
-                    Start 30m
-                  </button>
-                  <button className="primary" onClick={() => startMachine(m.id, 45)} aria-label={`Start ${m.name} 45 minutes`}>
-                    Start 45m
-                  </button>
-                </>
+                <div className="cycles">
+                  <button className="primary" onClick={() => startMachine(m.id, 15)} aria-label={`Start ${m.name} 15 minutes`}>Start 15m</button>
+                  <button className="primary" onClick={() => startMachine(m.id, 30)} aria-label={`Start ${m.name} 30 minutes`}>Start 30m</button>
+                  <button className="primary" onClick={() => startMachine(m.id, 45)} aria-label={`Start ${m.name} 45 minutes`}>Start 45m</button>
+                </div>
               )}
               {m.status === 'running' && (
                 <button className="warn" onClick={() => markFinished(m.id)} aria-label={`Mark ${m.name} finished`}>
@@ -347,8 +350,9 @@ export function DishwasherDashboard(): React.ReactElement {
       <section className="leaderboard" aria-label="Leaderboard">
         <h3 className="leaderboard-title">Leaderboard</h3>
         <ul className="leaderboard-list">
-          {leaderboard.map((e) => (
+          {leaderboard.map((e, idx) => (
             <li key={e.user} className="leaderboard-item">
+              <span className={`trophy ${idx === 0 ? 'gold' : idx === 1 ? 'silver' : idx === 2 ? 'bronze' : ''}`}>{idx < 3 ? '🏆' : ''}</span>
               <span className="lb-user">{e.user}</span>
               <span className="lb-points">{e.points} pts</span>
               <span className="lb-starts" aria-label="starts">{e.starts} starts</span>

@@ -13,6 +13,7 @@ class Machine(models.Model):
     status = models.CharField(max_length=16, default='idle')  # idle|running|finished
     ends_at = models.DateTimeField(null=True, blank=True)
     floor = models.CharField(max_length=32, default='floor')  # 'second floor' or 'floor'
+    started_by = models.ForeignKey('UserProfile', null=True, blank=True, on_delete=models.SET_NULL)
 
     def __str__(self) -> str:  # pragma: no cover
         return self.name
