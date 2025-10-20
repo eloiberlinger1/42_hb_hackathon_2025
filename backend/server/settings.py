@@ -10,7 +10,7 @@ ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', '*').split(',')
 # FT settings
 FORTYTWO_CLIENT_ID = "u-s4t2ud-ab1542f280bf15b4868de0bff79d1aadca4814da767aa856e89b142ff35482e3"
 FORTYTWO_CLIENT_SECRET = "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"
-FORTYTWO_REDIRECT_URI = "http://91.98.148.3:8080/api/auth/callback"
+FORTYTWO_REDIRECT_URI = "http://91.98.148.3:8000/api/auth/callback"
 
 INSTALLED_APPS = [
     'django.contrib.admin',
