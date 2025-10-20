@@ -5,6 +5,40 @@ import json
 from datetime import timedelta
 from django.utils import timezone
 from .models import Machine, UserProfile, ActionLog
+# views.py
+import requests
+from django.conf import settings
+from django.shortcuts import redirect
+from django.http import JsonResponse
+
+def forty_two_callback(request):
+    code = request.GET.get("code")
+    if not code:
+        return JsonResponse({"error": "No code provided"}, status=400)
+
+    # Exchange code for token
+    token_res = requests.post(
+        "https://api.intra.42.fr/oauth/token",
+        data={
+            "grant_type": "authorization_code",
+            "client_id": settings.FORTYTWO_CLIENT_ID,
+            "client_secret": settings.FORTYTWO_CLIENT_SECRET,
+            "code": code,
+            "redirect_uri": settings.FORTYTWO_REDIRECT_URI,
+        },
+    )
+    token_data = token_res.json()
+
+    # Use access token to get user info
+    headers = {"Authorization": f"Bearer {token_data['access_token']}"}
+    user_res = requests.get("https://api.intra.42.fr/v2/me", headers=headers)
+    user_data = user_res.json()
+
+    # Example: create or get user in your DB
+    # user = User.objects.get_or_create(email=user_data["email"], ...)
+    # login(request, user)
+
+    return JsonResponse(user_data)
 
 
 def get_or_create_user(name: str) -> UserProfile:
