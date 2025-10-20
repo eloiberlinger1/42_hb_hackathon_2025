@@ -124,14 +124,14 @@ export function DishwasherDashboard(): React.ReactElement {
     };
   }, []);
 
-  // Live polling: sync machine state from backend every 5s
+  // One-time sync from backend on mount
   useEffect(() => {
     let cancelled = false;
-    async function sync() {
+    (async () => {
       try {
         const res = await getStateApi();
         if (cancelled) return;
-        setMachines((prev) => {
+        setMachines(() => {
           const next: MachineState[] = res.machines.map((s: MachineStateDto) => {
             let endsAt: number | null = null;
             let remaining: number | null = null;
@@ -156,13 +156,8 @@ export function DishwasherDashboard(): React.ReactElement {
         // eslint-disable-next-line no-console
         console.error(e);
       }
-    }
-    sync();
-    const t = setInterval(sync, 5000);
-    return () => {
-      cancelled = true;
-      clearInterval(t);
-    };
+    })();
+    return () => { cancelled = true; };
   }, []);
 
   async function startMachine(id: string, cycleMinutes: number): Promise<void> {
@@ -229,7 +224,8 @@ export function DishwasherDashboard(): React.ReactElement {
       </header>
 
       <main className="grid">
-        {machines.map((m) => (
+        {/* Second floor (machines 1-2) */}
+        {machines.slice(0, 2).map((m) => (
           <article key={m.id} className="card" aria-label={`${m.name} card`}>
             <h2 className="machine-title">{m.name}</h2>
             <div className="status" aria-live="polite">
@@ -282,6 +278,63 @@ export function DishwasherDashboard(): React.ReactElement {
             </div>
           </article>
         ))}
+        {/* Floor label between rows */}
+        <div style={{ gridColumn: '1 / -1', textAlign: 'left', padding: '4px 6px', color: 'var(--muted)', fontSize: '12px' }}>Second floor</div>
+        {/* First floor (machines 3-4) */}
+        {machines.slice(2, 4).map((m) => (
+          <article key={m.id} className="card" aria-label={`${m.name} card`}>
+            <h2 className="machine-title">{m.name}</h2>
+            <div className="status" aria-live="polite">
+              <span className={`dot ${m.status}`} aria-hidden />
+              <span>
+                {m.status === 'idle' && 'Idle'}
+                {m.status === 'running' &&
+                  `Running • ${formatRemaining(m.remainingMinutes ?? 0)} left`}
+                {m.status === 'finished' && 'Finished'}
+              </span>
+            </div>
+
+            <div className="controls">
+              {m.status === 'idle' && (
+                <>
+                  <button className="primary" onClick={() => startMachine(m.id, 15)} aria-label={`Start ${m.name} 15 minutes`}>
+                    Start 15m
+                  </button>
+                  <button className="primary" onClick={() => startMachine(m.id, 30)} aria-label={`Start ${m.name} 30 minutes`}>
+                    Start 30m
+                  </button>
+                  <button className="primary" onClick={() => startMachine(m.id, 45)} aria-label={`Start ${m.name} 45 minutes`}>
+                    Start 45m
+                  </button>
+                </>
+              )}
+              {m.status === 'running' && (
+                <button className="warn" onClick={() => markFinished(m.id)} aria-label={`Mark ${m.name} finished`}>
+                  Mark finished
+                </button>
+              )}
+              {m.status === 'finished' && (
+                <button className="primary" onClick={async () => {
+                  try {
+                    if (userName) {
+                      await emptyMachineApi({ machineId: m.id, userName });
+                      const res = await getLeaderboardApi();
+                      setLeaderboard(res.leaderboard);
+                    }
+                  } catch (e) {
+                    // eslint-disable-next-line no-console
+                    console.error(e);
+                  } finally {
+                    resetToIdle(m.id);
+                  }
+                }} aria-label={`Empty ${m.name}`}>
+                  Empty it
+                </button>
+              )}
+            </div>
+          </article>
+        ))}
+        <div style={{ gridColumn: '1 / -1', textAlign: 'left', padding: '4px 6px', color: 'var(--muted)', fontSize: '12px' }}>First floor</div>
       </main>
 
       <section className="leaderboard" aria-label="Leaderboard">

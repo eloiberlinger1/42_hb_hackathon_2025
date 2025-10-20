@@ -40,6 +40,7 @@ export interface MachineStateDto {
   name: string;
   status: 'idle' | 'running' | 'finished';
   remaining_minutes: number | null;
+  floor: 'second floor' | 'floor' | string;
 }
 
 export function getStateApi(): Promise<{ machines: MachineStateDto[] }>{

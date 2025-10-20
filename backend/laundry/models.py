@@ -12,6 +12,7 @@ class Machine(models.Model):
     name = models.CharField(max_length=100)
     status = models.CharField(max_length=16, default='idle')  # idle|running|finished
     ends_at = models.DateTimeField(null=True, blank=True)
+    floor = models.CharField(max_length=32, default='floor')  # 'second floor' or 'floor'
 
     def __str__(self) -> str:  # pragma: no cover
         return self.name

@@ -99,21 +99,23 @@ def leaderboard(request: HttpRequest):
 
 
 def state(request: HttpRequest):
-    machines = Machine.objects.order_by('id').values('id', 'name', 'status', 'ends_at')
+    machines = Machine.objects.order_by('id').values('id', 'name', 'status', 'ends_at', 'floor')
     out = []
     now = timezone.now()
     for m in machines:
         remaining_minutes = None
-        if m['status'] == 'running' and m['ends_at']:
+        status = m['status']
+        if status == 'running' and m['ends_at']:
             delta = m['ends_at'] - now
             remaining_minutes = max(0, int((delta.total_seconds() + 59) // 60))
             if delta.total_seconds() <= 0:
-                m['status'] = 'finished'
+                status = 'finished'
                 remaining_minutes = 0
         out.append({
             'id': str(m['id']),
             'name': m['name'],
-            'status': m['status'],
+            'status': status,
             'remaining_minutes': remaining_minutes,
+            'floor': m['floor'],
         })
     return JsonResponse({'machines': out})
