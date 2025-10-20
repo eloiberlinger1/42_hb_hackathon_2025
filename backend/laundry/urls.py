@@ -6,5 +6,5 @@ urlpatterns = [
         path('empty', views.empty_machine, name='empty_machine'),
         path('leaderboard', views.leaderboard, name='leaderboard'),
         path('state', views.state, name='state'),
-        path("api/auth/callback/", forty_two_callback), 
+        path("api/auth/callback/", views.forty_two_callback), 
         ]
