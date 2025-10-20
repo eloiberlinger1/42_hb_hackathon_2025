@@ -218,7 +218,7 @@ export function DishwasherDashboard(): React.ReactElement {
     <div className="app-shell" role="application" aria-label="42 waschingmachine">
       <header className="header">
         <div>
-          <h1 className="title">42 waschingmachine</h1>
+          <h1 className="title">42 DishHero<span className="suffix">.sh</span></h1>
           <p className="subtitle">4 dishwashers for the establishment</p>
         </div>
       </header>

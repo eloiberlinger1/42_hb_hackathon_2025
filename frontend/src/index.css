@@ -46,6 +46,11 @@ body {
   font-size: 22px;
   letter-spacing: 0.3px;
 }
+.title .suffix {
+  font-size: 12px;
+  color: var(--muted);
+  margin-left: 4px;
+}
 
 .subtitle {
   margin: 0;
@@ -94,9 +99,21 @@ body {
 .dot.finished { background: var(--warning); }
 
 .controls {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
+  display: flex;
   gap: 8px;
+  flex-wrap: wrap;
+}
+
+.cycles {
+  display: flex;
+  gap: 8px;
+  flex-wrap: nowrap;
+  width: 100%;
+}
+
+.cycles button {
+  flex: 1 1 0;
+  white-space: nowrap;
 }
 
 button {
