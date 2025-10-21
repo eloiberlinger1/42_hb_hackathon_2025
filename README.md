@@ -2,6 +2,10 @@
 
 A mobile-friendly React (Vite + TypeScript) frontend to monitor 4 dishwashers in an establishment and mark when a dishwasher is started or finished. Data is stored locally in the browser (no backend required).
 
+## Demo
+
+![DishHero demo](./demo_dishHero.gif)
+
 ## Features
 
 - Four dishwasher cards with clear status: idle, running (with remaining time), finished
