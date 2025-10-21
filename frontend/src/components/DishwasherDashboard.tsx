@@ -4,6 +4,8 @@ import { emptyMachineApi, getLeaderboardApi, getMe, getStateApi, type MachineSta
 type MachineStatus = 'idle' | 'running' | 'finished';
 
 const AUTH_URL = "/api/auth/login/";
+const NOTIF_ASKED_KEY = 'notifications:asked';
+const NOTIF_ENABLED_KEY = 'notifications:enabled';
 
 
 interface MachineState {
@@ -68,14 +70,58 @@ export function DishwasherDashboard(): React.ReactElement {
   const now = Date.now();
   const needsUserName = !userName;
 
+  function isNotificationSupported(): boolean {
+    return typeof window !== 'undefined' && 'Notification' in window;
+  }
+
+  function sendReadyNotification(machineName: string): void {
+    try {
+      if (!isNotificationSupported()) return;
+      const enabled = localStorage.getItem(NOTIF_ENABLED_KEY) === 'true';
+      if (!enabled || Notification.permission !== 'granted') return;
+      // Best-effort; icon optional
+      new Notification('Dishwasher finished', {
+        body: `${machineName} is ready to empty`,
+      });
+    } catch {
+      // ignore notification errors
+    }
+  }
+
+  async function maybeRequestNotificationPermission(): Promise<void> {
+    try {
+      if (!isNotificationSupported()) return;
+      const alreadyAsked = localStorage.getItem(NOTIF_ASKED_KEY) === 'true';
+      if (Notification.permission === 'granted') {
+        localStorage.setItem(NOTIF_ENABLED_KEY, 'true');
+        if (!alreadyAsked) localStorage.setItem(NOTIF_ASKED_KEY, 'true');
+        return;
+      }
+      if (Notification.permission === 'denied') {
+        localStorage.setItem(NOTIF_ENABLED_KEY, 'false');
+        if (!alreadyAsked) localStorage.setItem(NOTIF_ASKED_KEY, 'true');
+        return;
+      }
+      if (!alreadyAsked) {
+        const res = await Notification.requestPermission();
+        localStorage.setItem(NOTIF_ASKED_KEY, 'true');
+        localStorage.setItem(NOTIF_ENABLED_KEY, res === 'granted' ? 'true' : 'false');
+      }
+    } catch {
+      // ignore permission errors
+    }
+  }
+
   // Tick every 15s to update remaining times
   useEffect(() => {
     const timer = setInterval(() => {
+      let justFinished: string[] = [];
       setMachines((prev) => {
         const updated = prev.map((m): MachineState => {
           if (m.status !== 'running' || m.endsAt === null) return m;
           const remainingMs = m.endsAt - Date.now();
           if (remainingMs <= 0) {
+            justFinished.push(m.name);
             return {
               ...m,
               status: 'finished' as const,
@@ -91,6 +137,12 @@ export function DishwasherDashboard(): React.ReactElement {
         saveToStorage(updated);
         return updated;
       });
+      if (justFinished.length > 0) {
+        // Defer side-effect out of state update microtask
+        setTimeout(() => {
+          justFinished.forEach((name) => sendReadyNotification(name));
+        }, 0);
+      }
     }, 15000);
     return () => clearInterval(timer);
   }, []);
@@ -118,6 +170,10 @@ export function DishwasherDashboard(): React.ReactElement {
       try {
         const me = await getMe();
         if (!cancelled) setUserName(me.authenticated ? me.user?.name ?? null : null);
+        if (!cancelled && me.authenticated) {
+          // Ask for notifications on first successful login
+          void maybeRequestNotificationPermission();
+        }
         const res = await getLeaderboardApi();
         if (!cancelled) setLeaderboard(res.leaderboard);
       } catch (e) {
