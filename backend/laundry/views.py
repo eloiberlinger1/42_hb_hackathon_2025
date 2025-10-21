@@ -105,12 +105,21 @@ def start_machine(request: HttpRequest):
     except Machine.DoesNotExist:
         return JsonResponse({'error': 'machine not found'}, status=404)
 
+    # Enforce 15-minute cooldown after last empty
+    if machine.last_emptied_at is not None:
+        cooldown_until = machine.last_emptied_at + timedelta(minutes=15)
+        now_ts = timezone.now()
+        if now_ts < cooldown_until:
+            remaining = int((cooldown_until - now_ts).total_seconds() // 60) or 1
+            return JsonResponse({'error': 'cooldown', 'cooldown_minutes_left': remaining}, status=409)
+
     user = get_or_create_user(username)
     ActionLog.objects.create(user=user, machine=machine, action='start')
     UserProfile.objects.filter(pk=user.pk).update(points=F('points') + 1)
 
     machine.status = 'running'
-    machine.ends_at = timezone.now() + timedelta(minutes=cycle_minutes)
+    # Add 5 minutes extra to all cycles
+    machine.ends_at = timezone.now() + timedelta(minutes=cycle_minutes + 5)
     machine.started_by = user
     machine.save(update_fields=['status', 'ends_at', 'started_by'])
 

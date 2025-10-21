@@ -263,7 +263,7 @@ export function DishwasherDashboard(): React.ReactElement {
             <div className="controls">
               {m.status === 'idle' && (
                 <div className="cycles">
-                  <button className="primary" onClick={() => startMachine(m.id, 15)} aria-label={`Start ${m.name} 15 minutes`}>Start 15m</button>
+                  <button className="primary" disabled={m.emptySince != null && m.emptySince < 15} onClick={() => startMachine(m.id, 15)} aria-label={`Start ${m.name} 15 minutes`}>Start 15m</button>
                   <button className="primary" onClick={() => startMachine(m.id, 30)} aria-label={`Start ${m.name} 30 minutes`}>Start 30m</button>
                   <button className="primary" onClick={() => startMachine(m.id, 45)} aria-label={`Start ${m.name} 45 minutes`}>Start 45m</button>
                 </div>
@@ -314,7 +314,7 @@ export function DishwasherDashboard(): React.ReactElement {
             <div className="controls">
               {m.status === 'idle' && (
                 <div className="cycles">
-                  <button className="primary" onClick={() => startMachine(m.id, 15)} aria-label={`Start ${m.name} 15 minutes`}>Start 15m</button>
+                  <button className="primary" disabled={m.emptySince != null && m.emptySince < 15} onClick={() => startMachine(m.id, 15)} aria-label={`Start ${m.name} 15 minutes`}>Start 15m</button>
                   <button className="primary" onClick={() => startMachine(m.id, 30)} aria-label={`Start ${m.name} 30 minutes`}>Start 30m</button>
                   <button className="primary" onClick={() => startMachine(m.id, 45)} aria-label={`Start ${m.name} 45 minutes`}>Start 45m</button>
                 </div>
@@ -348,7 +348,7 @@ export function DishwasherDashboard(): React.ReactElement {
         <ul className="leaderboard-list">
           {leaderboard.map((e, idx) => (
             <li key={e.user} className="leaderboard-item">
-              <span className={`trophy ${idx === 0 ? 'gold' : idx === 1 ? 'silver' : idx === 2 ? 'bronze' : ''}`}>{idx < 3 ? '🏆' : ''}</span>
+              <span className={`trophy ${idx === 0 ? 'gold' : idx === 1 ? 'silver' : idx === 2 ? 'bronze' : ''}`}>{idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : ''}</span>
               <span className="lb-user">{e.user}</span>
               <span className="lb-points">{e.points} pts</span>
               <span className="lb-starts" aria-label="starts">{e.starts} starts</span>
