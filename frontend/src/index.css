@@ -103,6 +103,7 @@ body {
 .dot.finished { background: var(--warning); }
 
 .controls { display: flex; gap: 10px; flex-wrap: wrap; }
+.controls { width: 100%; }
 
 .cycles {
   display: flex;
@@ -127,6 +128,7 @@ button {
   line-height: 1.2;
   min-height: 44px; /* iOS tap target */
   width: 100%; /* buttons expand in their grid/flex cell */
+  max-width: 100%;
 }
 
 button.primary { background: #1d3a2e; border-color: #2b5e4b; }
@@ -188,8 +190,8 @@ button.muted:active { background: #2a2f45; }
 .submit { width: 100%; }
 
 /* Cycle buttons as a tidy row of three that fits on phones */
-.cycles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
-.cycles button { width: 100%; }
+.cycles { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; width: 100%; }
+.cycles button { width: 100%; min-width: 0; }
 
 /* Ensure labels don't cause overflow */
 .leaderboard-title, .subtitle { overflow-wrap: anywhere; }
