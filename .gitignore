@@ -34,3 +34,8 @@ bun-debug.log*
 docker-compose.override.yml
 
 
+
+
+backend/db.sqlite3
+backend/staticfiles/
+
