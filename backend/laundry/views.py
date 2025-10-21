@@ -1,4 +1,4 @@
-from django.db.models import Count, F
+from django.db.models import Count, F, Q
 from django.http import JsonResponse, HttpRequest
 from django.views.decorators.csrf import csrf_exempt
 import json
@@ -105,6 +105,10 @@ def start_machine(request: HttpRequest):
     except Machine.DoesNotExist:
         return JsonResponse({'error': 'machine not found'}, status=404)
 
+    # Prevent starting if machine is already running
+    if machine.status == 'running' and machine.ends_at and machine.ends_at > timezone.now():
+        return JsonResponse({'error': 'already running'}, status=409)
+
     # Enforce 15-minute cooldown after last empty
     if machine.last_emptied_at is not None:
         cooldown_until = machine.last_emptied_at + timedelta(minutes=15)
@@ -144,6 +148,10 @@ def empty_machine(request: HttpRequest):
     except Machine.DoesNotExist:
         return JsonResponse({'error': 'machine not found'}, status=404)
 
+    # Only allow emptying when the machine has finished
+    if machine.status != 'finished' and not (machine.ends_at and machine.ends_at <= timezone.now()):
+        return JsonResponse({'error': 'not finished'}, status=409)
+
     user = get_or_create_user(username)
     ActionLog.objects.create(user=user, machine=machine, action='empty')
     UserProfile.objects.filter(pk=user.pk).update(points=F('points') + 5)
@@ -160,7 +168,7 @@ def empty_machine(request: HttpRequest):
 def leaderboard(request: HttpRequest):
     users = (
         UserProfile.objects.all()
-        .annotate(starts=Count('actionlog', filter=F('actionlog__action') == 'start'))
+        .annotate(starts=Count('actionlog', filter=Q(actionlog__action='start')))
         .order_by('-points', '-starts', 'name')
     )
     data = [

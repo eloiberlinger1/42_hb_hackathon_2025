@@ -237,7 +237,8 @@ export function DishwasherDashboard(): React.ReactElement {
   }, []);
 
   async function startMachine(id: string, cycleMinutes: number): Promise<void> {
-    const end = Date.now() + cycleMinutes * 60000;
+    // Optimistic update with +5 min buffer to mirror backend behavior
+    const end = Date.now() + (cycleMinutes + 5) * 60000;
     setMachines((prev) => {
       const updated = prev.map((m): MachineState =>
         m.id === id
@@ -256,9 +257,63 @@ export function DishwasherDashboard(): React.ReactElement {
     try {
       if (!userName) return;
       await startMachineApi({ machineId: id, cycleMinutes });
+      // Re-sync state from backend to ensure timings and startedBy are accurate
+      const state = await getStateApi();
+      setMachines(() => {
+        const next: MachineState[] = state.machines.map((s: MachineStateDto) => {
+          let endsAt: number | null = null;
+          let remaining: number | null = null;
+          if (s.status === 'running' && s.remaining_minutes != null) {
+            remaining = s.remaining_minutes;
+            endsAt = Date.now() + remaining * 60000;
+          } else if (s.status === 'finished') {
+            remaining = 0;
+          }
+          return {
+            id: s.id,
+            name: s.name,
+            status: s.status,
+            remainingMinutes: remaining,
+            endsAt,
+            startedBy: s.started_by ?? null,
+            readySince: s.ready_since_minutes ?? null,
+            emptySince: s.empty_since_minutes ?? null,
+          };
+        });
+        saveToStorage(next);
+        return next;
+      });
       const res = await getLeaderboardApi();
       setLeaderboard(res.leaderboard);
     } catch (e) {
+      // Roll back by syncing with backend if start failed (e.g., cooldown)
+      try {
+        const state = await getStateApi();
+        setMachines(() => {
+          const next: MachineState[] = state.machines.map((s: MachineStateDto) => {
+            let endsAt: number | null = null;
+            let remaining: number | null = null;
+            if (s.status === 'running' && s.remaining_minutes != null) {
+              remaining = s.remaining_minutes;
+              endsAt = Date.now() + remaining * 60000;
+            } else if (s.status === 'finished') {
+              remaining = 0;
+            }
+            return {
+              id: s.id,
+              name: s.name,
+              status: s.status,
+              remainingMinutes: remaining,
+              endsAt,
+              startedBy: s.started_by ?? null,
+              readySince: s.ready_since_minutes ?? null,
+              emptySince: s.empty_since_minutes ?? null,
+            };
+          });
+          saveToStorage(next);
+          return next;
+        });
+      } catch {}
       // eslint-disable-next-line no-console
       console.error(e);
     }
@@ -343,12 +398,39 @@ export function DishwasherDashboard(): React.ReactElement {
                       await emptyMachineApi({ machineId: m.id });
                       const res = await getLeaderboardApi();
                       setLeaderboard(res.leaderboard);
+                      resetToIdle(m.id);
                     }
                   } catch (e) {
+                    // Try to re-sync state if empty failed (e.g., not finished)
+                    try {
+                      const state = await getStateApi();
+                      setMachines(() => {
+                        const next: MachineState[] = state.machines.map((s: MachineStateDto) => {
+                          let endsAt: number | null = null;
+                          let remaining: number | null = null;
+                          if (s.status === 'running' && s.remaining_minutes != null) {
+                            remaining = s.remaining_minutes;
+                            endsAt = Date.now() + remaining * 60000;
+                          } else if (s.status === 'finished') {
+                            remaining = 0;
+                          }
+                          return {
+                            id: s.id,
+                            name: s.name,
+                            status: s.status,
+                            remainingMinutes: remaining,
+                            endsAt,
+                            startedBy: s.started_by ?? null,
+                            readySince: s.ready_since_minutes ?? null,
+                            emptySince: s.empty_since_minutes ?? null,
+                          };
+                        });
+                        saveToStorage(next);
+                        return next;
+                      });
+                    } catch {}
                     // eslint-disable-next-line no-console
                     console.error(e);
-                  } finally {
-                    resetToIdle(m.id);
                   }
                 }} aria-label={`Empty ${m.name}`}>
                   Empty it
