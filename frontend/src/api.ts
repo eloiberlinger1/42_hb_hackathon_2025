@@ -17,17 +17,17 @@ async function request<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
   return (await res.json()) as T;
 }
 
-export function startMachineApi(args: { machineId: string; cycleMinutes: number; userName: string }): Promise<{ ok: true }>{
+export function startMachineApi(args: { machineId: string; cycleMinutes: number }): Promise<{ ok: true }>{
   return request('/api/start', {
     method: 'POST',
-    body: JSON.stringify({ machine_id: args.machineId, cycle_minutes: args.cycleMinutes, user_name: args.userName }),
+    body: JSON.stringify({ machine_id: args.machineId, cycle_minutes: args.cycleMinutes }),
   });
 }
 
-export function emptyMachineApi(args: { machineId: string; userName: string }): Promise<{ ok: true }>{
+export function emptyMachineApi(args: { machineId: string }): Promise<{ ok: true }>{
   return request('/api/empty', {
     method: 'POST',
-    body: JSON.stringify({ machine_id: args.machineId, user_name: args.userName }),
+    body: JSON.stringify({ machine_id: args.machineId }),
   });
 }
 
@@ -46,6 +46,15 @@ export interface MachineStateDto {
 
 export function getStateApi(): Promise<{ machines: MachineStateDto[] }>{
   return request('/api/state');
+}
+
+export interface AuthMeResponse {
+  authenticated: boolean;
+  user?: { name: string };
+}
+
+export function getMe(): Promise<AuthMeResponse> {
+  return request('/api/auth/me/');
 }
 
 

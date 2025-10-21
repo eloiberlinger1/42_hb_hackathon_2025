@@ -68,3 +68,12 @@ STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
+
+# 42 OAuth configuration via environment variables
+FORTYTWO_CLIENT_ID = os.environ.get('FORTYTWO_CLIENT_ID', '')
+FORTYTWO_CLIENT_SECRET = os.environ.get('FORTYTWO_CLIENT_SECRET', '')
+FORTYTWO_REDIRECT_URI = os.environ.get('FORTYTWO_REDIRECT_URI', '')
+
+SESSION_COOKIE_SECURE = os.environ.get('SESSION_COOKIE_SECURE', 'false').lower() == 'true'
+CSRF_COOKIE_SECURE = os.environ.get('CSRF_COOKIE_SECURE', 'false').lower() == 'true'
+SESSION_COOKIE_SAMESITE = 'Lax'

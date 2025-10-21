@@ -9,14 +9,24 @@ from .models import Machine, UserProfile, ActionLog
 import requests
 from django.conf import settings
 from django.shortcuts import redirect
-from django.http import JsonResponse
 
-def forty_two_callback(request):
+
+def forty_two_login(request: HttpRequest):
+    client_id = settings.FORTYTWO_CLIENT_ID
+    redirect_uri = settings.FORTYTWO_REDIRECT_URI
+    auth_url = (
+        "https://api.intra.42.fr/oauth/authorize"
+        f"?client_id={client_id}&redirect_uri={requests.utils.quote(redirect_uri, safe='')}"
+        "&response_type=code"
+    )
+    return redirect(auth_url)
+
+
+def forty_two_callback(request: HttpRequest):
     code = request.GET.get("code")
     if not code:
         return JsonResponse({"error": "No code provided"}, status=400)
 
-    # Exchange code for token
     token_res = requests.post(
         "https://api.intra.42.fr/oauth/token",
         data={
@@ -26,19 +36,48 @@ def forty_two_callback(request):
             "code": code,
             "redirect_uri": settings.FORTYTWO_REDIRECT_URI,
         },
+        timeout=10,
     )
+    token_res.raise_for_status()
     token_data = token_res.json()
 
-    # Use access token to get user info
     headers = {"Authorization": f"Bearer {token_data['access_token']}"}
-    user_res = requests.get("https://api.intra.42.fr/v2/me", headers=headers)
+    user_res = requests.get("https://api.intra.42.fr/v2/me", headers=headers, timeout=10)
+    user_res.raise_for_status()
     user_data = user_res.json()
 
-    # Example: create or get user in your DB
-    # user = User.objects.get_or_create(email=user_data["email"], ...)
-    # login(request, user)
+    # Store session info (use 42 login as username)
+    username = user_data.get("login") or user_data.get("usual_full_name") or user_data.get("email")
+    if not username:
+        return JsonResponse({"error": "Unable to determine username"}, status=400)
+    request.session["user_name"] = username
+    request.session["auth_provider"] = "42"
+    request.session.save()
 
-    return JsonResponse(user_data)
+    # Ensure user exists in our table
+    UserProfile.objects.get_or_create(name=username)
+
+    # Redirect back to app root (frontend)
+    return redirect("/")
+
+
+def me(request: HttpRequest):
+    username = request.session.get("user_name")
+    if not username:
+        return JsonResponse({"authenticated": False}, status=200)
+    return JsonResponse({"authenticated": True, "user": {"name": username}})
+
+
+def logout_view(request: HttpRequest):
+    request.session.flush()
+    return JsonResponse({"ok": True})
+
+
+def _require_auth(request: HttpRequest):
+    username = request.session.get("user_name")
+    if not username:
+        return None, JsonResponse({"error": "auth required"}, status=401)
+    return username, None
 
 
 def get_or_create_user(name: str) -> UserProfile:
@@ -52,25 +91,24 @@ def ensure_machine(machine_id: int) -> Machine:
 
 @csrf_exempt
 def start_machine(request: HttpRequest):
+    username, error = _require_auth(request)
+    if error:
+        return error
     if request.method != 'POST':
         return JsonResponse({'error': 'method not allowed'}, status=405)
     try:
         payload = json.loads(request.body.decode('utf-8'))
         machine_id = int(payload['machine_id'])
         cycle_minutes = int(payload.get('cycle_minutes', 45))
-        user_name = str(payload['user_name']).strip()
     except Exception:
         return JsonResponse({'error': 'invalid payload'}, status=400)
-
-    if not user_name:
-        return JsonResponse({'error': 'user_name required'}, status=400)
 
     try:
         machine = ensure_machine(machine_id)
     except Machine.DoesNotExist:
         return JsonResponse({'error': 'machine not found'}, status=404)
 
-    user = get_or_create_user(user_name)
+    user = get_or_create_user(username)
     ActionLog.objects.create(user=user, machine=machine, action='start')
     UserProfile.objects.filter(pk=user.pk).update(points=F('points') + 1)
 
@@ -84,24 +122,23 @@ def start_machine(request: HttpRequest):
 
 @csrf_exempt
 def empty_machine(request: HttpRequest):
+    username, error = _require_auth(request)
+    if error:
+        return error
     if request.method != 'POST':
         return JsonResponse({'error': 'method not allowed'}, status=405)
     try:
         payload = json.loads(request.body.decode('utf-8'))
         machine_id = int(payload['machine_id'])
-        user_name = str(payload['user_name']).strip()
     except Exception:
         return JsonResponse({'error': 'invalid payload'}, status=400)
-
-    if not user_name:
-        return JsonResponse({'error': 'user_name required'}, status=400)
 
     try:
         machine = ensure_machine(machine_id)
     except Machine.DoesNotExist:
         return JsonResponse({'error': 'machine not found'}, status=404)
 
-    user = get_or_create_user(user_name)
+    user = get_or_create_user(username)
     ActionLog.objects.create(user=user, machine=machine, action='empty')
     UserProfile.objects.filter(pk=user.pk).update(points=F('points') + 5)
 

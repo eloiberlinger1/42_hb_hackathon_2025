@@ -7,6 +7,9 @@ services:
     environment:
       - DJANGO_ALLOWED_HOSTS=*
       - DJANGO_DEBUG=false
+      - FORTYTWO_CLIENT_ID=${FORTYTWO_CLIENT_ID}
+      - FORTYTWO_CLIENT_SECRET=${FORTYTWO_CLIENT_SECRET}
+      - FORTYTWO_REDIRECT_URI=${FORTYTWO_REDIRECT_URI}
     volumes:
       - backend-data:/app
     expose:

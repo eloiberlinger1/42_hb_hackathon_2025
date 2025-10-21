@@ -1,13 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { emptyMachineApi, getLeaderboardApi, getStateApi, type MachineStateDto, startMachineApi, type LeaderboardEntry } from '../api';
+import { emptyMachineApi, getLeaderboardApi, getMe, getStateApi, type MachineStateDto, startMachineApi, type LeaderboardEntry } from '../api';
 
 type MachineStatus = 'idle' | 'running' | 'finished';
 
-const FORTYTWO_CLIENT_ID = "u-s4t2ud-ab1542f280bf15b4868de0bff79d1aadca4814da767aa856e89b142ff35482e3";
-const FORTYTWO_REDIRECT_URI = "http://localhost:8000/api/auth/callback/";
-const AUTH_URL = `https://api.intra.42.fr/oauth/authorize?client_id=${FORTYTWO_CLIENT_ID}&redirect_uri=${encodeURIComponent(
-  FORTYTWO_REDIRECT_URI
-)}&response_type=code`;
+const AUTH_URL = "/api/auth/login/";
 
 
 interface MachineState {
@@ -63,10 +59,7 @@ function formatRemaining(minutes: number): string {
 
 export function DishwasherDashboard(): React.ReactElement {
   const [machines, setMachines] = useState<MachineState[]>(() => loadFromStorage());
-  const [userName, setUserName] = useState<string | null>(() => {
-    const v = localStorage.getItem(USERNAME_KEY);
-    return v && v.trim().length > 0 ? v : null;
-  });
+  const [userName, setUserName] = useState<string | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const now = Date.now();
   const needsUserName = !userName;
@@ -114,11 +107,13 @@ export function DishwasherDashboard(): React.ReactElement {
     });
   }, []);
 
-  // Load leaderboard periodically
+  // Load session and leaderboard periodically
   useEffect(() => {
     let cancelled = false;
     const load = async () => {
       try {
+        const me = await getMe();
+        if (!cancelled) setUserName(me.authenticated ? me.user?.name ?? null : null);
         const res = await getLeaderboardApi();
         if (!cancelled) setLeaderboard(res.leaderboard);
       } catch (e) {
@@ -190,7 +185,7 @@ export function DishwasherDashboard(): React.ReactElement {
     });
     try {
       if (!userName) return;
-      await startMachineApi({ machineId: id, cycleMinutes, userName });
+      await startMachineApi({ machineId: id, cycleMinutes });
       const res = await getLeaderboardApi();
       setLeaderboard(res.leaderboard);
     } catch (e) {
@@ -273,7 +268,7 @@ export function DishwasherDashboard(): React.ReactElement {
                 <button className="primary" onClick={async () => {
                   try {
                     if (userName) {
-                      await emptyMachineApi({ machineId: m.id, userName });
+                      await emptyMachineApi({ machineId: m.id });
                       const res = await getLeaderboardApi();
                       setLeaderboard(res.leaderboard);
                     }
@@ -327,7 +322,7 @@ export function DishwasherDashboard(): React.ReactElement {
                 <button className="primary" onClick={async () => {
                   try {
                     if (userName) {
-                      await emptyMachineApi({ machineId: m.id, userName });
+                      await emptyMachineApi({ machineId: m.id });
                       const res = await getLeaderboardApi();
                       setLeaderboard(res.leaderboard);
                     }
