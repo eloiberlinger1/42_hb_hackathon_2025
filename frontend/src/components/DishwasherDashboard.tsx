@@ -3,7 +3,7 @@ import { emptyMachineApi, getLeaderboardApi, getStateApi, type MachineStateDto, 
 
 type MachineStatus = 'idle' | 'running' | 'finished';
 
-const FORTYTWO_CLIENT_ID = "YOUR_CLIENT_ID";
+const FORTYTWO_CLIENT_ID = "u-s4t2ud-ab1542f280bf15b4868de0bff79d1aadca4814da767aa856e89b142ff35482e3";
 const FORTYTWO_REDIRECT_URI = "http://localhost:8000/api/auth/callback/";
 const AUTH_URL = `https://api.intra.42.fr/oauth/authorize?client_id=${FORTYTWO_CLIENT_ID}&redirect_uri=${encodeURIComponent(
   FORTYTWO_REDIRECT_URI
