@@ -14,6 +14,7 @@ class Machine(models.Model):
     ends_at = models.DateTimeField(null=True, blank=True)
     floor = models.CharField(max_length=32, default='floor')  # 'second floor' or 'floor'
     started_by = models.ForeignKey('UserProfile', null=True, blank=True, on_delete=models.SET_NULL)
+    last_emptied_at = models.DateTimeField(null=True, blank=True)
 
     def __str__(self) -> str:  # pragma: no cover
         return self.name

@@ -46,7 +46,6 @@ def forty_two_callback(request: HttpRequest):
     user_res.raise_for_status()
     user_data = user_res.json()
 
-    # Store session info (use 42 login as username)
     username = user_data.get("login") or user_data.get("usual_full_name") or user_data.get("email")
     if not username:
         return JsonResponse({"error": "Unable to determine username"}, status=400)
@@ -54,10 +53,8 @@ def forty_two_callback(request: HttpRequest):
     request.session["auth_provider"] = "42"
     request.session.save()
 
-    # Ensure user exists in our table
     UserProfile.objects.get_or_create(name=username)
 
-    # Redirect back to app root (frontend)
     return redirect("/")
 
 
@@ -145,7 +142,8 @@ def empty_machine(request: HttpRequest):
     machine.status = 'idle'
     machine.ends_at = None
     machine.started_by = None
-    machine.save(update_fields=['status', 'ends_at', 'started_by'])
+    machine.last_emptied_at = timezone.now()
+    machine.save(update_fields=['status', 'ends_at', 'started_by', 'last_emptied_at'])
 
     return JsonResponse({'ok': True})
 
@@ -168,11 +166,13 @@ def leaderboard(request: HttpRequest):
 
 
 def state(request: HttpRequest):
-    machines = Machine.objects.order_by('id').values('id', 'name', 'status', 'ends_at', 'floor', 'started_by__name')
+    machines = Machine.objects.order_by('id').values('id', 'name', 'status', 'ends_at', 'floor', 'started_by__name', 'last_emptied_at')
     out = []
     now = timezone.now()
     for m in machines:
         remaining_minutes = None
+        ready_since_minutes = None
+        empty_since_minutes = None
         status = m['status']
         if status == 'running' and m['ends_at']:
             delta = m['ends_at'] - now
@@ -180,11 +180,19 @@ def state(request: HttpRequest):
             if delta.total_seconds() <= 0:
                 status = 'finished'
                 remaining_minutes = 0
+        if status == 'finished' and m['ends_at']:
+            delta_ready = now - m['ends_at']
+            ready_since_minutes = max(0, int((delta_ready.total_seconds() + 59) // 60))
+        if status == 'idle' and m['last_emptied_at']:
+            delta_empty = now - m['last_emptied_at']
+            empty_since_minutes = max(0, int((delta_empty.total_seconds() + 59) // 60))
         out.append({
             'id': str(m['id']),
             'name': m['name'],
             'status': status,
             'remaining_minutes': remaining_minutes,
+            'ready_since_minutes': ready_since_minutes,
+            'empty_since_minutes': empty_since_minutes,
             'floor': m['floor'],
             'started_by': m['started_by__name'],
         })

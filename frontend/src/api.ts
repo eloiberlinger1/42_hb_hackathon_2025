@@ -42,6 +42,8 @@ export interface MachineStateDto {
   remaining_minutes: number | null;
   floor: 'second floor' | 'floor' | string;
   started_by?: string | null;
+  ready_since_minutes?: number | null;
+  empty_since_minutes?: number | null;
 }
 
 export function getStateApi(): Promise<{ machines: MachineStateDto[] }>{

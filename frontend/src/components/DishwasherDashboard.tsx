@@ -16,6 +16,8 @@ interface MachineState {
   endsAt: number | null;
   // Name of the user who started the current cycle; null if none
   startedBy: string | null;
+  readySince: number | null;
+  emptySince: number | null;
 }
 
 const STORAGE_KEY = 'dishwashers:v1';
@@ -29,6 +31,8 @@ function initialMachines(): MachineState[] {
     remainingMinutes: null,
     endsAt: null,
     startedBy: null,
+    readySince: null,
+    emptySince: null,
   }));
 }
 
@@ -153,6 +157,8 @@ export function DishwasherDashboard(): React.ReactElement {
               remainingMinutes: remaining,
               endsAt,
               startedBy: s.started_by ?? null,
+              readySince: s.ready_since_minutes ?? null,
+              emptySince: s.empty_since_minutes ?? null,
             };
           });
           saveToStorage(next);
@@ -241,14 +247,16 @@ export function DishwasherDashboard(): React.ReactElement {
             <div className="status" aria-live="polite">
               <span className={`dot ${m.status}`} aria-hidden />
               <span>
-                {m.status === 'idle' && 'Idle'}
+                {m.status === 'idle' && (m.emptySince != null ? `Empty • ${formatRemaining(m.emptySince)} ago` : 'Idle')}
                 {m.status === 'running' && (
                   <>
                     Running • {formatRemaining(m.remainingMinutes ?? 0)} left
                     {m.startedBy && <span style={{ marginLeft: 6, color: 'var(--muted)' }}>by {m.startedBy}</span>}
                   </>
                 )}
-                {m.status === 'finished' && 'Finished'}
+                {m.status === 'finished' && (
+                  <>Ready • {formatRemaining(m.readySince ?? 0)} ago</>
+                )}
               </span>
             </div>
 
@@ -260,11 +268,7 @@ export function DishwasherDashboard(): React.ReactElement {
                   <button className="primary" onClick={() => startMachine(m.id, 45)} aria-label={`Start ${m.name} 45 minutes`}>Start 45m</button>
                 </div>
               )}
-              {m.status === 'running' && (
-                <button className="warn" onClick={() => markFinished(m.id)} aria-label={`Mark ${m.name} finished`}>
-                  Mark finished
-                </button>
-              )}
+              {/* Removed mark finished UI */}
               {m.status === 'finished' && (
                 <button className="primary" onClick={async () => {
                   try {
@@ -294,14 +298,16 @@ export function DishwasherDashboard(): React.ReactElement {
             <div className="status" aria-live="polite">
               <span className={`dot ${m.status}`} aria-hidden />
               <span>
-                {m.status === 'idle' && 'Idle'}
+                {m.status === 'idle' && (m.emptySince != null ? `Empty • ${formatRemaining(m.emptySince)} ago` : 'Idle')}
                 {m.status === 'running' && (
                   <>
                     Running • {formatRemaining(m.remainingMinutes ?? 0)} left
                     {m.startedBy && <span style={{ marginLeft: 6, color: 'var(--muted)' }}>by {m.startedBy}</span>}
                   </>
                 )}
-                {m.status === 'finished' && 'Finished'}
+                {m.status === 'finished' && (
+                  <>Ready • {formatRemaining(m.readySince ?? 0)} ago</>
+                )}
               </span>
             </div>
 
@@ -313,11 +319,7 @@ export function DishwasherDashboard(): React.ReactElement {
                   <button className="primary" onClick={() => startMachine(m.id, 45)} aria-label={`Start ${m.name} 45 minutes`}>Start 45m</button>
                 </div>
               )}
-              {m.status === 'running' && (
-                <button className="warn" onClick={() => markFinished(m.id)} aria-label={`Mark ${m.name} finished`}>
-                  Mark finished
-                </button>
-              )}
+              {/* Removed mark finished UI */}
               {m.status === 'finished' && (
                 <button className="primary" onClick={async () => {
                   try {
