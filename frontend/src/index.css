@@ -23,6 +23,7 @@ body {
     Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
   background: var(--bg);
   color: var(--text);
+  overflow-x: hidden; /* prevent horizontal scrolling */
 }
 
 .app-shell {
@@ -60,15 +61,21 @@ body {
 
 .grid {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: 1fr; /* single column by default for phones */
   gap: 12px;
   padding: 0 4px 16px;
+}
+
+@media (min-width: 480px) {
+  .grid {
+    grid-template-columns: 1fr 1fr; /* two columns on wider screens */
+  }
 }
 
 .card {
   background: var(--card);
   border-radius: 16px;
-  padding: 14px;
+  padding: 16px;
   display: flex;
   flex-direction: column;
   gap: 10px;
@@ -98,11 +105,7 @@ body {
 .dot.running { background: var(--primary); }
 .dot.finished { background: var(--warning); }
 
-.controls {
-  display: flex;
-  gap: 8px;
-  flex-wrap: wrap;
-}
+.controls { display: flex; gap: 10px; flex-wrap: wrap; }
 
 .cycles {
   display: flex;
@@ -121,9 +124,12 @@ button {
   background: #1c243c;
   color: var(--text);
   border: 1px solid #2a3353;
-  padding: 10px 12px;
-  border-radius: 12px;
-  font-size: 14px;
+  padding: 14px 16px; /* larger touch target */
+  border-radius: 14px;
+  font-size: 16px;
+  line-height: 1.2;
+  min-height: 44px; /* iOS tap target */
+  width: 100%; /* buttons expand in their grid/flex cell */
 }
 
 button.primary { background: #1d3a2e; border-color: #2b5e4b; }
@@ -144,7 +150,7 @@ button.muted:active { background: #2a2f45; }
 .leaderboard { padding: 0 8px 24px; }
 .leaderboard-title { font-size: 16px; margin: 8px 4px; }
 .leaderboard-list { list-style: none; padding: 0; margin: 0; display: flex; flex-direction: column; gap: 8px; }
-.leaderboard-item { display: grid; grid-template-columns: 1fr auto auto; gap: 10px; align-items: center; background: #12182a; padding: 10px 12px; border-radius: 12px; }
+.leaderboard-item { display: grid; grid-template-columns: auto 1fr auto auto; gap: 10px; align-items: center; background: #12182a; padding: 12px 14px; border-radius: 12px; }
 .leaderboard-item .trophy { margin-right: 8px; }
 .trophy.gold { color: #ffd166; }
 .trophy.silver { color: #c0c0c0; }
@@ -174,14 +180,21 @@ button.muted:active { background: #2a2f45; }
 .overlay-subtitle { margin: 0 0 12px; color: var(--muted); font-size: 14px; }
 .input {
   width: 100%;
-  padding: 10px 12px;
+  padding: 12px 14px;
   border-radius: 12px;
   border: 1px solid #2a3353;
   background: #0f1526;
   color: var(--text);
   margin-bottom: 10px;
-  font-size: 14px;
+  font-size: 16px;
 }
 .submit { width: 100%; }
+
+/* Cycle buttons as a tidy row of three that fits on phones */
+.cycles { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; width: 100%; }
+.cycles button { width: 100%; }
+
+/* Ensure labels don't cause overflow */
+.leaderboard-title, .subtitle { overflow-wrap: anywhere; }
 
 
