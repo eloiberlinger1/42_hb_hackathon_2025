@@ -119,7 +119,14 @@ export function DishwasherDashboard(): React.ReactElement {
       let justFinished: string[] = [];
       setMachines((prev) => {
         const updated = prev.map((m): MachineState => {
-          if (m.status !== 'running' || m.endsAt === null) return m;
+          if (m.status !== 'running' || m.endsAt === null) {
+            // Progress cooldown timer for recently emptied machines
+            if (m.status === 'idle' && m.emptySince != null) {
+              const nextEmpty = (m.emptySince ?? 0) + 0.25; // 15s = 0.25 minute
+              return { ...m, emptySince: nextEmpty };
+            }
+            return m;
+          }
           const remainingMs = m.endsAt - Date.now();
           if (remainingMs <= 0) {
             justFinished.push(m.name);
@@ -271,7 +278,7 @@ export function DishwasherDashboard(): React.ReactElement {
     setMachines((prev) => {
       const updated = prev.map((m): MachineState =>
         m.id === id
-          ? { ...m, status: 'idle' as const, remainingMinutes: null, endsAt: null, startedBy: null }
+          ? { ...m, status: 'idle' as const, remainingMinutes: null, endsAt: null, startedBy: null, emptySince: 0 }
           : m
       );
       saveToStorage(updated);
@@ -324,8 +331,8 @@ export function DishwasherDashboard(): React.ReactElement {
               {m.status === 'idle' && (
                 <div className="cycles">
                   <button className="primary" disabled={m.emptySince != null && m.emptySince < 15} onClick={() => startMachine(m.id, 15)} aria-label={`Start ${m.name} 15 minutes`}>Start 15m</button>
-                  <button className="primary" onClick={() => startMachine(m.id, 30)} aria-label={`Start ${m.name} 30 minutes`}>Start 30m</button>
-                  <button className="primary" onClick={() => startMachine(m.id, 45)} aria-label={`Start ${m.name} 45 minutes`}>Start 45m</button>
+                  <button className="primary" disabled={m.emptySince != null && m.emptySince < 15} onClick={() => startMachine(m.id, 30)} aria-label={`Start ${m.name} 30 minutes`}>Start 30m</button>
+                  <button className="primary" disabled={m.emptySince != null && m.emptySince < 15} onClick={() => startMachine(m.id, 45)} aria-label={`Start ${m.name} 45 minutes`}>Start 45m</button>
                 </div>
               )}
               {/* Removed mark finished UI */}
@@ -375,8 +382,8 @@ export function DishwasherDashboard(): React.ReactElement {
               {m.status === 'idle' && (
                 <div className="cycles">
                   <button className="primary" disabled={m.emptySince != null && m.emptySince < 15} onClick={() => startMachine(m.id, 15)} aria-label={`Start ${m.name} 15 minutes`}>Start 15m</button>
-                  <button className="primary" onClick={() => startMachine(m.id, 30)} aria-label={`Start ${m.name} 30 minutes`}>Start 30m</button>
-                  <button className="primary" onClick={() => startMachine(m.id, 45)} aria-label={`Start ${m.name} 45 minutes`}>Start 45m</button>
+                  <button className="primary" disabled={m.emptySince != null && m.emptySince < 15} onClick={() => startMachine(m.id, 30)} aria-label={`Start ${m.name} 30 minutes`}>Start 30m</button>
+                  <button className="primary" disabled={m.emptySince != null && m.emptySince < 15} onClick={() => startMachine(m.id, 45)} aria-label={`Start ${m.name} 45 minutes`}>Start 45m</button>
                 </div>
               )}
               {/* Removed mark finished UI */}
