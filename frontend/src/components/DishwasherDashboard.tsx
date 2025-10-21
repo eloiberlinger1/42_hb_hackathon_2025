@@ -232,7 +232,8 @@ export function DishwasherDashboard(): React.ReactElement {
         </div>
       </header>
 
-      <main className="grid">
+      <main className="stack">
+        <div className="section-title">Second floor</div>
         {/* Second floor (machines 1-2) */}
         {machines.slice(0, 2).map((m) => (
           <article key={m.id} className="card" aria-label={`${m.name} card`}>
@@ -285,8 +286,7 @@ export function DishwasherDashboard(): React.ReactElement {
             </div>
           </article>
         ))}
-        {/* Floor label between rows */}
-        <div style={{ gridColumn: '1 / -1', textAlign: 'left', padding: '4px 6px', color: 'var(--muted)', fontSize: '12px' }}>Second floor</div>
+        <div className="section-title">First floor</div>
         {/* First floor (machines 3-4) */}
         {machines.slice(2, 4).map((m) => (
           <article key={m.id} className="card" aria-label={`${m.name} card`}>
@@ -339,7 +339,6 @@ export function DishwasherDashboard(): React.ReactElement {
             </div>
           </article>
         ))}
-        <div style={{ gridColumn: '1 / -1', textAlign: 'left', padding: '4px 6px', color: 'var(--muted)', fontSize: '12px' }}>First floor</div>
       </main>
 
       <section className="leaderboard" aria-label="Leaderboard">
