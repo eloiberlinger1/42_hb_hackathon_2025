@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from 'react';
+import logoUrl from '../assets/DishHero_transparent.png';
 import { emptyMachineApi, getLeaderboardApi, getMe, getStateApi, type MachineStateDto, startMachineApi, type LeaderboardEntry } from '../api';
 
 type MachineStatus = 'idle' | 'running' | 'finished';
@@ -288,9 +289,12 @@ export function DishwasherDashboard(): React.ReactElement {
   return (
     <div className="app-shell" role="application" aria-label="42 waschingmachine">
       <header className="header">
-        <div>
-          <h1 className="title">42 DishHero<span className="suffix">.sh</span></h1>
-          <p className="subtitle">4 dishwashers for the establishment</p>
+        <div className="brand">
+          <img className="logo" src={logoUrl} alt="DishHero logo" width={40} height={40} />
+          <div>
+            <h1 className="title">42 DishHero<span className="suffix">.sh</span></h1>
+            <p className="subtitle">4 dishwashers for the establishment</p>
+          </div>
         </div>
       </header>
 
