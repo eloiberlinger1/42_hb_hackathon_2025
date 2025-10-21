@@ -3,6 +3,13 @@ import { emptyMachineApi, getLeaderboardApi, getStateApi, type MachineStateDto, 
 
 type MachineStatus = 'idle' | 'running' | 'finished';
 
+const FORTYTWO_CLIENT_ID = "YOUR_CLIENT_ID";
+const FORTYTWO_REDIRECT_URI = "http://localhost:8000/api/auth/callback/";
+const AUTH_URL = `https://api.intra.42.fr/oauth/authorize?client_id=${FORTYTWO_CLIENT_ID}&redirect_uri=${encodeURIComponent(
+  FORTYTWO_REDIRECT_URI
+)}&response_type=code`;
+
+
 interface MachineState {
   id: string;
   name: string;
@@ -352,24 +359,19 @@ export function DishwasherDashboard(): React.ReactElement {
       </section>
 
       {needsUserName && (
-        <div className="overlay" role="dialog" aria-modal="true" aria-label="Enter your name">
-          <div className="overlay-card">
-            <h2 className="overlay-title">Welcome</h2>
-            <p className="overlay-subtitle">Please enter your name to participate</p>
-            <form
-              onSubmit={(e) => {
-                e.preventDefault();
-                const data = new FormData(e.currentTarget as HTMLFormElement);
-                const name = String(data.get('name') || '');
-                saveUserName(name);
-              }}
-            >
-              <input name="name" className="input" placeholder="Your name" autoFocus aria-label="Your name" />
-              <button className="primary submit" type="submit">Save</button>
-            </form>
-          </div>
-        </div>
-      )}
+  <div className="overlay" role="dialog" aria-modal="true" aria-label="Login with 42">
+    <div className="overlay-card">
+      <h2 className="overlay-title">Welcome</h2>
+      <p className="overlay-subtitle">Log in using your 42 Intra account to participate</p>
+      <a href={AUTH_URL}>
+        <button className="primary submit" type="button">
+          Login with 42
+        </button>
+      </a>
+    </div>
+  </div>
+)}
+
     </div>
   );
 }
